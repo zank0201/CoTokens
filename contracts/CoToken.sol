@@ -1,23 +1,33 @@
 pragma solidity ^0.5.0;
-import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
+
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
-contract CoToken is Ownable, ERC20{
+contract CoToken is Ownable {
     
-    // create variables which contain name, symbol and total supply
-    
-    
-    string public Name = "Co";
-    string public Symbol = "CO";
     // current token supply
     uint public TotalSupply = 100;
-    
-    //create mapping of balances 
+// mapping of balances
     mapping (address => uint) public balances;
+
+        constructor() public { 
+        balances[msg.sender] = TotalSupply;
+
+    }
+    // functiion transfer tokens between accounts
+    function transferFrom(address _from, address _to, uint numberOfTokens) public {
+        // transfer recipent can only recieve money if there are tokens in balance of sender
+        //require(balances[_from] >= _nCo);
+        balances[_from] -= numberOfTokens;
+        balances[_to] += numberOfTokens;
+        TotalSupply -= numberOfTokens;
+    } 
+    
+    // 
     //function to calculate price of purchase given
     //bonding curve where f(x) = 0.01x + 0.2
-    
-        function buyPrice (uint _nCo) public pure returns(uint) {
+    // create constructor with name of owner
+
+    function buyPrice (uint _nCo) internal pure returns(uint) {
         //bonding curve function
         //price = f(x)
         // price in ether
@@ -27,7 +37,7 @@ contract CoToken is Ownable, ERC20{
         return price ;
     }
     // function to calculate price for sale of nco tokens
-    function sellPrice(uint _nCo) public pure returns(uint) {
+    function sellPrice(uint _nCo) internal pure returns(uint) {
        
     uint price = (0.01 * 1e18 wei * _nCo) + (0.2 * 1e18 wei);
 
@@ -36,46 +46,36 @@ contract CoToken is Ownable, ERC20{
     
     // implement mint funtion which will create tokens
     // requires correct current price to be transferred
-    function mint(address _to, uint _nCo) public payable {
+    function mint(address _to, uint numberOfTokens) public payable {
         // use erc20 mint function
         //number of tokens bought use buy price function and work backwards
         
 
-        require(msg.value == buyPrice(_nCo), "Not enough tokens were given.");
-       // _mint(_to, _nCo);
-        
-        // add balance to token buyer
-        _mint(_to, _nCo);
-   
-        TotalSupply = TotalSupply.sub(_nCo);
+        require(msg.value == buyPrice(numberOfTokens), "Not enough tokens were given.");
+        // call TransferFrom function to mint tokens to account
+        transferFrom(owner(), _to, numberOfTokens);
         
     }
 
     
     //function ehich will sell tokens back to curve 
     // can only be called by ownership
-    function burn(address _from, uint _nCo) onlyOwner public payable{
-        
-        require(sellPrice(_nCo) == msg.value, "Not enough money was given for the tokens");
-        // remove tokens from seller
-        // balances[_from] = balances[_from].sub(_nCo);
+    function burn(address _from, uint _nCo) public onlyOwner {  
         //add tokens to balance of owner
-        // balances[msg.sender] = balances[msg.sender].add(_nCo);
-    
-        //_burn(_from, _nCo);
-        _burn(_from, _nCo);
-        TotalSupply = TotalSupply.add(_nCo);
-        
+        require(balances[_from]>= _nCo);
+        transferFrom(_from, msg.sender, _nCo);
+     
     }
     
     // destroy function which  destrucs contrac
     // requires owner to be called
     // only called if all Cotokens belong to owner
-    function destroy() onlyOwner public {
+    function destroy() onlyOwner external {
         //uint ownerBalance = balances[msg.sender];
 
-        require(TotalSupply == 100, "All tokens do not belong to owner");
+        require(balances[msg.sender] == 100, "All tokens do not belong to owner");
         selfdestruct(msg.sender);
     }
+    
     
 }

@@ -18,26 +18,27 @@ contract("CoToken", function (accounts) {
     it("should mint number of tokens to address of caller", async function() {
 
         // call mint function to let transaction take place
-        let mint = await CoTokenInstance.mint(accounts[0], 20, {'value': 0.4 * 1e18})
+        let mint = await CoTokenInstance.mint(accounts[1], 20, {'from': accounts[1], 'value': 0.4 * 1e18})
         // check balance of account 0
-        let balance = await CoTokenInstance.balanceOf(accounts[0])
+        let balance = await CoTokenInstance.balances(accounts[1])
         assert.equal(balance.toNumber(), 20, "Mint not succesful")
     })
 
     it("should burn number of tokens from address", async function() {
         //first need to mint to certain account then remove
-        await CoTokenInstance.mint(accounts[0], 20, {'value': 0.4 * 1e18})
-        await CoTokenInstance.burn(accounts[0], 20, {'value': 0.4 * 1e18})
-        let balance1 = await CoTokenInstance.balanceOf(accounts[0])
+        await CoTokenInstance.mint(accounts[1], 20, {'value': 0.4 * 1e18})
+        await CoTokenInstance.burn(accounts[1], 20)
+        let balance1 = await CoTokenInstance.balances(accounts[1])
+        //console.log(burn.receipt.logs)
         assert.equal(balance1.toNumber(), 0, "Burn not succesful")
     })
 
     it("should destroy the contract once tokens are in owners hands", async function() {
-        await CoTokenInstance.mint(accounts[0], 20, {'value': 0.4 * 1e18})
+        //await CoTokenInstance.mint(accounts[0], 20, {'value': 0.4 * 1e18})
 
-        await truffleAssert.reverts(CoTokenInstance.destroy())
-
-        let total = await CoTokenInstance.TotalSupply()
+        await CoTokenInstance.destroy()
+        
+        let total = await CoTokenInstance.balances(accounts[0])
 
         // test will fail since we've minted tokens
         assert.equal(total.toNumber(), 100, "Total supply is not in owners account")
@@ -48,5 +49,7 @@ contract("CoToken", function (accounts) {
     })
 
 
-}
-)
+    })
+
+
+
